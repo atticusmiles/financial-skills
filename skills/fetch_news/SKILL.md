@@ -1,0 +1,262 @@
+---
+name: fetch_news
+description: Query TradeHub's news database — financial news flashes (财联社快讯, real-time) and AI-generated daily digests (每日要闻简报). Use this skill when the user wants to read financial news, get market updates, browse daily news summaries, or search historical news from TradeHub. Triggers include "show me today's financial news", "what happened in the market yesterday", "get the daily news digest", "search news about <topic>", "财联社快讯", "今日要闻", "市场动态".
+---
+
+# Fetch News from TradeHub
+
+This skill queries the **TradeHub news REST API** to retrieve financial news collected from 财联社 (cls.cn) and AI-generated daily digests produced by Claude.
+
+Three operations are available (these mirror the previous MCP tools that have been removed):
+
+| Operation | Endpoint | Use case |
+|-----------|----------|----------|
+| `list_news_flash` | `GET /api/v1/news/flash` | 实时快讯列表（按时间范围 + 关键词过滤） |
+| `list_news_digest` | `GET /api/v1/news/digest` | 每日要闻简报列表（Claude 生成的 markdown 摘要） |
+| `list_news_weekly` | `GET /api/v1/news/weekly` | 每周投研简报列表（基于 ≥5 个日级简报 LLM 二次聚合，允许缺失 2 天） |
+| `search_news` | `GET /api/v1/news/search` | 关键词搜索（走财联社搜索引擎） |
+
+## When to Use
+
+Use this skill when the user:
+
+- Asks for recent financial news / market updates
+- Wants the daily news digest (要闻 / 简报)
+- Searches for news on a specific topic / stock / company
+- Mentions 财联社、快讯、要闻、简报、新闻、市场动态、digest、newsflash
+- Wants to know "what happened today / yesterday in the market"
+
+**Do NOT use this skill for:**
+
+- Stock prices or charts (use stock-quote skills instead)
+- General web search (this only covers TradeHub's curated CLS feed)
+- Non-financial news
+
+## Prerequisites
+
+The user must provide:
+
+1. **TradeHub server URL** — production default: `https://tradehub.niotech.cc`
+   - Override at runtime via `--url` flag or `TRADEHUB_URL` env var
+   - For local development set `TRADEHUB_URL=http://localhost:8000`
+2. **API Key** — format `th_<5>_<27>` (36 chars total, e.g. `th_MTWArmpi...`)
+   - The user generates this in TradeHub Web → Avatar → Settings → "API Key" card
+   - Three ways to supply the key (precedence high → low):
+     1. `--api-key th_xxx` flag (per-invocation)
+     2. `TRADEHUB_API_KEY` env var
+     3. **`TRADEHUB_API_KEY` file** in the skill directory (i.e. `skills/fetch_news/TRADEHUB_API_KEY`) — recommended for persistent local setup; the file should contain just the key (optionally trailing newline), and is gitignored
+   - If none of the three is present, the CLI exits with code 2 and a friendly error
+   - Never commit the API Key file or echo it in plaintext logs
+
+## How to Use
+
+You have two equivalent paths — pick whichever fits the agent's runtime.
+
+### Path A: Bundled Python CLI (`fetch_news.py`)
+
+Best for agents with shell access. Pure-stdlib Python 3 (no dependencies).
+
+```bash
+# List today's news flash
+python3 skills/fetch_news/scripts/fetch_news.py flash \
+  --start "2026-06-22 00:00:00" \
+  --end   "2026-06-22 23:59:59" \
+  --api-key th_xxx
+
+# List recent digests (default: last 30 days)
+python3 skills/fetch_news/scripts/fetch_news.py digest --api-key th_xxx
+
+# Get a specific digest by date
+python3 skills/fetch_news/scripts/fetch_news.py digest \
+  --start 2026-06-21 --end 2026-06-21 --api-key th_xxx
+
+# Search news (keyword)
+python3 skills/fetch_news/scripts/fetch_news.py search \
+  --keyword "美联储" --max-count 10 --api-key th_xxx
+
+# List weekly digests (default: last 90 days)
+python3 skills/fetch_news/scripts/fetch_news.py weekly --api-key th_xxx
+
+# Get a specific week by week_start date
+python3 skills/fetch_news/scripts/fetch_news.py weekly \
+  --start 2026-06-15 --end 2026-06-15 --api-key th_xxx
+```
+
+Useful flags:
+- `--url https://your-host` — override server URL (default: `https://tradehub.niotech.cc`)
+- `--page-size N` — pagination (flash max 5000, digest max 180, weekly max 60, search max 100)
+- `--page N` — page number
+- `--json` — emit raw JSON (default is human-readable summary)
+- `TRADEHUB_URL` env var — alternative to `--url`
+- `TRADEHUB_API_KEY` env var or `TRADEHUB_API_KEY` file in skill dir — alternative to `--api-key`
+
+### Path B: Direct curl (for agents without Python)
+
+```bash
+# Flash
+curl -H "Authorization: Bearer th_xxx" \
+  "https://tradehub.niotech.cc/api/v1/news/flash?start_time=2026-06-22%2000:00:00&end_time=2026-06-22%2023:59:59&page_size=20"
+
+# Digest
+curl -H "Authorization: Bearer th_xxx" \
+  "https://tradehub.niotech.cc/api/v1/news/digest?page_size=10"
+
+# Search
+curl -H "Authorization: Bearer th_xxx" \
+  "https://tradehub.niotech.cc/api/v1/news/search?keyword=美联储&max_count=10"
+
+# Weekly digest (default: last 90 days)
+curl -H "Authorization: Bearer th_xxx" \
+  "https://tradehub.niotech.cc/api/v1/news/weekly?page_size=5"
+```
+
+## Response Schemas
+
+### `list_news_flash` response
+
+```json
+{
+  "items": [
+    {
+      "id": 12345,
+      "source": "cls",
+      "source_id": 2404974,
+      "title": "...",
+      "content": "...",
+      "ctime": 1782061469,           // unix seconds
+      "author": "央视新闻" | null,
+      "subjects": [{"subject_name": "中东冲突", ...}]
+    }
+  ],
+  "total": 1234,
+  "page": 1,
+  "page_size": 500
+}
+```
+
+### `list_news_digest` response
+
+```json
+{
+  "items": [
+    {
+      "id": 89,
+      "digest_date": "2026-06-21",
+      "summary": "# 2026-06-21 要闻\n\n## 地缘政治\n...",  // full markdown
+      "news_count": 312,
+      "status": "success",
+      "duration_ms": 8421
+    }
+  ],
+  "total": 30,
+  "page": 1,
+  "page_size": 60
+}
+```
+
+### `list_news_weekly` response
+
+```json
+{
+  "items": [
+    {
+      "id": 12,
+      "week_start_date": "2026-06-15",
+      "week_end_date": "2026-06-21",
+      "summary": "# 2026-06-15 ~ 2026-06-21 周报\n\n## 本周总览\n...",  // full markdown
+      "day_count": 7,
+      "news_count": 2184,
+      "status": "success",
+      "duration_ms": 180000
+    }
+  ],
+  "total": 2,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+**Field semantics:**
+- `week_start_date` / `week_end_date`: 自然周范围 (`week_start_date` 始终是周一)
+- `day_count`: 实际覆盖天数 (5~7)，service 允许缺失 2 天以内（<5 则不生成周报）。完整周=7，部分周=5 或 6
+- `summary`: 完整 markdown, 8 个二级标题 (本周总览 / 宏观与政策 / 资金与流动性 / 行业与产业 / 公司与个股 / 海外与外部 / 情绪与主题 / 下周关注)
+- 部分周 (`day_count < 7`) 的 `summary` 会标注缺失日期，LLM 基于已有内容总结, 不臆测缺失天
+
+### `search_news` response
+
+```json
+{
+  "list": [
+    {"title": "...", "content": "...", "ctime": 1782061469, ...}
+  ],
+  "scanned": 3,
+  "pages_fetched": 1
+}
+```
+
+**Field semantics:**
+- `scanned`: number of CLS pages fetched from upstream (may report `0` when results come from a warm cache; treat as informational only)
+- `pages_fetched`: total CLS pages traversed during the search
+- `list[].ctime`: unix seconds; convert to Asia/Shanghai for display
+- `list[].title` / `list[].content`: may contain `<em>...</em>` HTML highlight tags from CLS — strip them for human display (the bundled CLI does this in human-readable mode, but `--json` mode preserves them for downstream agents that want highlight info)
+
+**Note on `max_count`:** the server treats this as a best-effort hint and may return more items than requested. The bundled CLI truncates display to `--max-count` in human-readable mode. If you call the REST API directly, truncate client-side if you need strict limits.
+
+## Authentication
+
+All requests require an `Authorization: Bearer th_xxx` header. The server recognizes API Keys by the `th_` prefix and routes them through the dual-auth path (JWT also accepted, but skills should always use API Key).
+
+Failure modes:
+- `401` — invalid / revoked / wrong-case API Key
+- `422` — missing required params (e.g. `start_time` for flash)
+- `502` — CLS upstream unavailable or anti-crawl triggered (search only)
+
+## Tips for the Agent
+
+- **Prefer `--json` mode** (`--json` flag) when you want to programmatically inspect / filter / reformat the data yourself. Human-readable mode is for direct user display.
+- **Time zone**: `start_time` / `end_time` are Asia/Shanghai. The server and CLS use this zone. The user's local time may differ — convert before querying.
+- **`start_time` is required for flash** but optional for digest. Don't forget it.
+- **`page_size` caps**: flash=5000, digest=180, weekly=60, search=100. For "today's news" flash with `page_size=500` is usually enough.
+- **Digest `summary` is full markdown** — render it as markdown when displaying to the user.
+- **Search returns CLS-formatted items** (different shape from flash). Don't merge them blindly.
+- **Rate limiting**: there is none on the REST side, but CLS search (502s) has its own anti-crawl. If search returns 502, fall back to flash with a keyword filter.
+
+## Examples
+
+### User: "今天市场有什么新闻？"
+
+```bash
+python3 skills/fetch_news/scripts/fetch_news.py flash \
+  --start "2026-06-22 00:00:00" --end "2026-06-22 23:59:59" \
+  --page-size 50 --api-key th_xxx
+```
+
+Summarize the top items by subject cluster.
+
+### User: "昨天的重要新闻汇总"
+
+```bash
+python3 skills/fetch_news/scripts/fetch_news.py digest \
+  --start 2026-06-21 --end 2026-06-21 --api-key th_xxx
+```
+
+Render the returned `summary` markdown directly.
+
+### User: "搜一下美联储相关新闻"
+
+```bash
+python3 skills/fetch_news/scripts/fetch_news.py search \
+  --keyword "美联储" --max-count 15 --api-key th_xxx
+```
+
+Group results by time and mention source attribution.
+
+### User: "过去 90 天有什么投资机会？"
+
+```bash
+# 周报一次消费 13 周数据 (90 天 ≈ 13 周), 效率远高于逐日看 90 份日报
+python3 skills/fetch_news/scripts/fetch_news.py weekly \
+  --page-size 20 --api-key th_xxx
+```
+
+逐周阅读 `summary` markdown, 提取跨周主题演变、当前主线、下周关注。日级细节按需用 `digest --start <date> --end <date>` 回查。

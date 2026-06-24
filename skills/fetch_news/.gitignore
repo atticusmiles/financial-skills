@@ -1,0 +1,2 @@
+# 防止误把本地 API Key 文件提交. 该文件是给本地 agent 读取的凭证, 不应入库.
+TRADEHUB_API_KEY
