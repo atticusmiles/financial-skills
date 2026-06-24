@@ -36,7 +36,7 @@ Use this skill when the user:
 
 The user must provide:
 
-1. **TradeHub server URL** — production default: `https://tradehub.niotech.cc`
+1. **TradeHub server URL** — production default: `https://tradehub-api.niotech.cc`
    - Override at runtime via `--url` flag or `TRADEHUB_URL` env var
    - For local development set `TRADEHUB_URL=http://localhost:8000`
 2. **API Key** — format `th_<5>_<27>` (36 chars total, e.g. `th_MTWArmpi...`)
@@ -83,7 +83,7 @@ python3 skills/fetch_news/scripts/fetch_news.py weekly \
 ```
 
 Useful flags:
-- `--url https://your-host` — override server URL (default: `https://tradehub.niotech.cc`)
+- `--url https://your-host` — override server URL (default: `https://tradehub-api.niotech.cc`)
 - `--page-size N` — pagination (flash max 5000, digest max 180, weekly max 60, search max 100)
 - `--page N` — page number
 - `--json` — emit raw JSON (default is human-readable summary)
@@ -95,19 +95,19 @@ Useful flags:
 ```bash
 # Flash
 curl -H "Authorization: Bearer th_xxx" \
-  "https://tradehub.niotech.cc/api/v1/news/flash?start_time=2026-06-22%2000:00:00&end_time=2026-06-22%2023:59:59&page_size=20"
+  "https://tradehub-api.niotech.cc/api/v1/news/flash?start_time=2026-06-22%2000:00:00&end_time=2026-06-22%2023:59:59&page_size=20"
 
 # Digest
 curl -H "Authorization: Bearer th_xxx" \
-  "https://tradehub.niotech.cc/api/v1/news/digest?page_size=10"
+  "https://tradehub-api.niotech.cc/api/v1/news/digest?page_size=10"
 
 # Search
 curl -H "Authorization: Bearer th_xxx" \
-  "https://tradehub.niotech.cc/api/v1/news/search?keyword=美联储&max_count=10"
+  "https://tradehub-api.niotech.cc/api/v1/news/search?keyword=美联储&max_count=10"
 
 # Weekly digest (default: last 90 days)
 curl -H "Authorization: Bearer th_xxx" \
-  "https://tradehub.niotech.cc/api/v1/news/weekly?page_size=5"
+  "https://tradehub-api.niotech.cc/api/v1/news/weekly?page_size=5"
 ```
 
 ## Response Schemas
