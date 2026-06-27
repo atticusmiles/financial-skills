@@ -94,10 +94,24 @@ def _resolve_api_key(explicit: str | None) -> str:
 
 
 def _fetch_api_key(args: argparse.Namespace) -> str:
-    """统一从 args / env / file 解析 API key. 不做预检查——
-    缺 key 时让下游 HTTP 调用自然失败（401），由调用方按错误处理。"""
+    """统一从 args / env / file 解析 API key, 失败时 sys.exit(2)."""
+    # argparse 父子 parser 陷阱: 顶层传的 --api-key 可能被子命令的 default None 覆盖.
+    # _resolve_api_key 内部已 fallback 到 env / file.
     explicit = getattr(args, "api_key", None)
-    return _resolve_api_key(explicit)
+    key = _resolve_api_key(explicit)
+    if not key:
+        if explicit and not explicit.startswith("th_"):
+            sys.stderr.write(
+                f"ERROR: API key must start with 'th_' (got {explicit[:6]}...). "
+                "TradeHub API keys have the format th_<5 chars>_<27 chars>.\n"
+            )
+        else:
+            sys.stderr.write(
+                "ERROR: missing API key. Supply via --api-key flag, "
+                "TRADEHUB_API_KEY env var, or skills/fetch_news/TRADEHUB_API_KEY file.\n"
+            )
+        sys.exit(2)
+    return key
 
 
 def _resolve_url(args: argparse.Namespace) -> str:

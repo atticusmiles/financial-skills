@@ -32,25 +32,20 @@ Use this skill when the user:
 - General web search (this only covers TradeHub's curated CLS feed)
 - Non-financial news
 
-## Prerequisites
+## Calling Convention (重要)
 
-The user must provide:
+**直接调用，不要预先检查或询问 API Key、URL 等配置。** CLI 会自动从环境变量 `TRADEHUB_API_KEY`、或 skill 目录下的 `TRADEHUB_API_KEY` 文件读取凭证。绝大多数用户已配置好持久化凭证，预先询问只会徒增打扰。
 
-1. **TradeHub server URL** — production default: `https://tradehub-api.niotech.cc`
-   - Override at runtime via `--url` flag or `TRADEHUB_URL` env var
-   - For local development set `TRADEHUB_URL=http://localhost:8000`
-2. **API Key** — format `th_<5>_<27>` (36 chars total, e.g. `th_MTWArmpi...`)
-   - The user generates this in TradeHub Web → Avatar → Settings → "API Key" card
-   - Three ways to supply the key (precedence high → low):
-     1. `--api-key th_xxx` flag (per-invocation)
-     2. `TRADEHUB_API_KEY` env var
-     3. **`TRADEHUB_API_KEY` file** in the skill directory (i.e. `skills/fetch_news/TRADEHUB_API_KEY`) — recommended for persistent local setup; the file should contain just the key (optionally trailing newline), and is gitignored
-   - If none of the three is present, the CLI exits with code 2 and a friendly error
-   - Never commit the API Key file or echo it in plaintext logs
+调用流程：
+1. 直接执行命令（**不要带 `--api-key` 参数**，让 CLI 自动读取已配置的 key）
+2. 若返回鉴权错误（exit code 2、HTTP 401、或 stderr 出现 "API Key" 字样），再按本文档末尾的 [配置 API Key](#配置-api-key) 引导用户一次性完成配置，然后重试
+3. 其他错误按正常排错流程处理
+
+参数示例中**不再出现 `--api-key th_xxx`**，因为它应来自环境/文件而非命令行。
 
 ## How to Use
 
-You have two equivalent paths — pick whichever fits the agent's runtime.
+Two equivalent paths — pick whichever fits the runtime.
 
 ### Path A: Bundled Python CLI (`fetch_news.py`)
 
@@ -60,35 +55,33 @@ Best for agents with shell access. Pure-stdlib Python 3 (no dependencies).
 # List today's news flash
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py flash \
   --start "2026-06-22 00:00:00" \
-  --end   "2026-06-22 23:59:59" \
-  --api-key th_xxx
+  --end   "2026-06-22 23:59:59"
 
 # List recent digests (default: last 30 days)
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py digest --api-key th_xxx
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py digest
 
 # Get a specific digest by date
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py digest \
-  --start 2026-06-21 --end 2026-06-21 --api-key th_xxx
+  --start 2026-06-21 --end 2026-06-21
 
 # Search news (keyword)
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py search \
-  --keyword "美联储" --max-count 10 --api-key th_xxx
+  --keyword "美联储" --max-count 10
 
 # List weekly digests (default: last 90 days)
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py weekly --api-key th_xxx
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py weekly
 
 # Get a specific week by week_start date
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py weekly \
-  --start 2026-06-15 --end 2026-06-15 --api-key th_xxx
+  --start 2026-06-15 --end 2026-06-15
 ```
 
 Useful flags:
-- `--url https://your-host` — override server URL (default: `https://tradehub-api.niotech.cc`)
+- `--url https://your-host` — override server URL (default: `https://tradehub-api.niotech.cc`; also read from `TRADEHUB_URL` env)
 - `--page-size N` — pagination (flash max 5000, digest max 180, weekly max 60, search max 100)
 - `--page N` — page number
 - `--json` — emit raw JSON (default is human-readable summary)
-- `TRADEHUB_URL` env var — alternative to `--url`
-- `TRADEHUB_API_KEY` env var or `TRADEHUB_API_KEY` file in skill dir — alternative to `--api-key`
+- `--api-key th_xxx` — only pass this when debugging auth issues; normally rely on `TRADEHUB_API_KEY` env var or `TRADEHUB_API_KEY` file in skill dir
 
 ### Path B: Direct curl (for agents without Python)
 
@@ -207,9 +200,26 @@ curl -H "Authorization: Bearer th_xxx" \
 All requests require an `Authorization: Bearer th_xxx` header. The server recognizes API Keys by the `th_` prefix and routes them through the dual-auth path (JWT also accepted, but skills should always use API Key).
 
 Failure modes:
+- **`exit code 2` (CLI)** — no API Key found in `--api-key` / `TRADEHUB_API_KEY` env / `TRADEHUB_API_KEY` file. See [配置 API Key](#配置-api-key) below.
 - `401` — invalid / revoked / wrong-case API Key
 - `422` — missing required params (e.g. `start_time` for flash)
 - `502` — CLS upstream unavailable or anti-crawl triggered (search only)
+
+## 配置 API Key
+
+**仅在调用失败（exit code 2 或 401）时才引导用户配置。** 平时不要主动检查或询问。
+
+API Key 格式 `th_<5>_<27>`（共 36 字符，例如 `th_MTWArmpi...`），用户在 TradeHub Web → Avatar → Settings → "API Key" 卡片生成。
+
+提供 key 的方式（优先级从高到低）：
+
+1. `--api-key th_xxx` 命令行参数（仅调试用，会暴露在 shell history）
+2. `TRADEHUB_API_KEY` 环境变量
+3. **`TRADEHUB_API_KEY` 文件** — 推荐的持久化方式，放在 skill 目录下（即 `${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/TRADEHUB_API_KEY`），内容仅一行 key（可带尾换行），已被 `.gitignore` 忽略
+
+服务器 URL 默认 `https://tradehub-api.niotech.cc`，本地开发可通过 `TRADEHUB_URL=http://localhost:8000` 或 `--url` 覆盖。
+
+**安全提醒：** 永远不要把 API Key 文件提交到仓库，也不要在日志里明文打印。
 
 ## Tips for the Agent
 
@@ -228,7 +238,7 @@ Failure modes:
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py flash \
   --start "2026-06-22 00:00:00" --end "2026-06-22 23:59:59" \
-  --page-size 50 --api-key th_xxx
+  --page-size 50
 ```
 
 Summarize the top items by subject cluster.
@@ -237,7 +247,7 @@ Summarize the top items by subject cluster.
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py digest \
-  --start 2026-06-21 --end 2026-06-21 --api-key th_xxx
+  --start 2026-06-21 --end 2026-06-21
 ```
 
 Render the returned `summary` markdown directly.
@@ -246,7 +256,7 @@ Render the returned `summary` markdown directly.
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py search \
-  --keyword "美联储" --max-count 15 --api-key th_xxx
+  --keyword "美联储" --max-count 15
 ```
 
 Group results by time and mention source attribution.
@@ -256,7 +266,7 @@ Group results by time and mention source attribution.
 ```bash
 # 周报一次消费 13 周数据 (90 天 ≈ 13 周), 效率远高于逐日看 90 份日报
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py weekly \
-  --page-size 20 --api-key th_xxx
+  --page-size 20
 ```
 
 逐周阅读 `summary` markdown, 提取跨周主题演变、当前主线、下周关注。日级细节按需用 `digest --start <date> --end <date>` 回查。
