@@ -76,15 +76,14 @@ def _read_api_key_file() -> str:
         return None
 
 
-def _resolve_api_key(explicit: str | None) -> str:
+def _resolve_api_key() -> str:
     """解析 + 验证 API key (不退出). 返回空串表示无效.
 
-    优先级 (高 → 低):
-      1. --api-key flag (explicit)
-      2. TRADEHUB_API_KEY env var
-      3. skill 目录下的 TRADEHUB_API_KEY 文件
+    读取方式 (按优先级):
+      1. TRADEHUB_API_KEY 环境变量
+      2. skill 目录下的 TRADEHUB_API_KEY 文件
     """
-    raw = explicit or os.environ.get("TRADEHUB_API_KEY", "") or _read_api_key_file() or ""
+    raw = os.environ.get("TRADEHUB_API_KEY", "") or _read_api_key_file() or ""
     if not raw:
         return ""
     key = raw.strip()
@@ -94,22 +93,13 @@ def _resolve_api_key(explicit: str | None) -> str:
 
 
 def _fetch_api_key(args: argparse.Namespace) -> str:
-    """统一从 args / env / file 解析 API key, 失败时 sys.exit(2)."""
-    # argparse 父子 parser 陷阱: 顶层传的 --api-key 可能被子命令的 default None 覆盖.
-    # _resolve_api_key 内部已 fallback 到 env / file.
-    explicit = getattr(args, "api_key", None)
-    key = _resolve_api_key(explicit)
+    """从 env / file 解析 API key, 失败时 sys.exit(2)."""
+    key = _resolve_api_key()
     if not key:
-        if explicit and not explicit.startswith("th_"):
-            sys.stderr.write(
-                f"ERROR: API key must start with 'th_' (got {explicit[:6]}...). "
-                "TradeHub API keys have the format th_<5 chars>_<27 chars>.\n"
-            )
-        else:
-            sys.stderr.write(
-                "ERROR: missing API key. Supply via --api-key flag, "
-                "TRADEHUB_API_KEY env var, or skills/fetch_news/TRADEHUB_API_KEY file.\n"
-            )
+        sys.stderr.write(
+            "ERROR: missing API key. Set TRADEHUB_API_KEY environment variable "
+            "or create skills/fetch_news/TRADEHUB_API_KEY file.\n"
+        )
         sys.exit(2)
     return key
 
@@ -380,16 +370,13 @@ def cmd_search(args: argparse.Namespace) -> int:
 def _build_parser() -> argparse.ArgumentParser:
     """构建 CLI parser.
 
-    设计: 把 --api-key / --url / --json 同时挂到顶层和每个子命令,
-    让 `flash --api-key xxx` 和 `--api-key xxx flash` 都能 work.
+    API Key 从环境变量或文件读取，不接受命令行参数（避免泄露到 shell history）。
     """
     common = argparse.ArgumentParser(add_help=False)
     # default=SUPPRESS: 未传该 flag 时, namespace 中不创建对应属性,
     # 避免子 parser 的 default 覆盖父 parser 已设置的值.
     common.add_argument("--url", default=argparse.SUPPRESS,
                         help=f"TradeHub server URL (default: {DEFAULT_URL} or $TRADEHUB_URL)")
-    common.add_argument("--api-key", default=argparse.SUPPRESS,
-                        help="API key th_xxx (or $TRADEHUB_API_KEY env, or skills/fetch_news/TRADEHUB_API_KEY file)")
     common.add_argument("--json", action="store_true", default=argparse.SUPPRESS,
                         help="emit raw JSON instead of human-readable summary")
 
