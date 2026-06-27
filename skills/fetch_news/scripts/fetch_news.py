@@ -49,7 +49,7 @@ for _stream in (sys.stdout, sys.stderr):
             pass
 
 
-DEFAULT_URL = "https://tradehub-api.niotech.cc"
+DEFAULT_URL = "https://tradehub.niotech.cc"
 DEFAULT_TIMEOUT = 30
 
 # skill 目录下的 API Key 文件 (脚本在 scripts/, 上一级是 skill 根)
