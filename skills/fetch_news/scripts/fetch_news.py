@@ -336,85 +336,6 @@ def cmd_weekly(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_doctor(args: argparse.Namespace) -> int:
-    """环境自检：Python 版本、API key、TradeHub 连通性。"""
-    checks = []
-
-    pv = sys.version_info
-    checks.append({
-        "name": "python_version",
-        "ok": pv >= (3, 9),
-        "detail": f"{pv.major}.{pv.minor}.{pv.micro}",
-        "hint": "" if pv >= (3, 9) else "需要 Python 3.9+",
-    })
-
-    explicit = getattr(args, "api_key", None)
-    env_key = os.environ.get("TRADEHUB_API_KEY", "")
-    file_key = _read_api_key_file()
-    if explicit:
-        src, key_ok = "--api-key flag", explicit.startswith("th_")
-        key_val = explicit
-    elif env_key:
-        src, key_ok = "TRADEHUB_API_KEY env", env_key.startswith("th_")
-        key_val = env_key
-    elif file_key:
-        src, key_ok = f"file ({_API_KEY_FILE})", file_key.startswith("th_")
-        key_val = file_key
-    else:
-        src, key_ok, key_val = "missing", False, ""
-    checks.append({
-        "name": "api_key",
-        "ok": key_ok,
-        "detail": src,
-        "hint": "" if key_ok else "运行: echo th_xxx > skills/fetch_news/TRADEHUB_API_KEY 或 set TRADEHUB_API_KEY=th_xxx",
-    })
-
-    checks.append({"name": "stdlib_only", "ok": True, "detail": "urllib+json", "hint": ""})
-
-    base_url = _resolve_url(args)
-    if key_ok and key_val:
-        try:
-            today = dt.date.today()
-            start = f"{today.isoformat()} 00:00:00"
-            data = _request(base_url, key_val, "/api/v1/news/flash",
-                            {"start": start, "page_size": 1})
-            total = data.get("total", 0)
-            checks.append({
-                "name": "tradehub_reachable",
-                "ok": True,
-                "detail": f"{base_url} OK, today total={total}",
-                "hint": "",
-            })
-        except SystemExit as e:
-            checks.append({
-                "name": "tradehub_reachable",
-                "ok": False,
-                "detail": f"sample call exit {e.code}",
-                "hint": "检查 TRADEHUB_URL / 网络 / API key 是否有效",
-            })
-    else:
-        checks.append({
-            "name": "tradehub_reachable", "ok": False,
-            "detail": "skipped (no valid api key)",
-            "hint": "先配置 API key 再验证连通性",
-        })
-
-    all_ok = all(c["ok"] for c in checks)
-    out = {
-        "code": 0 if all_ok else 1,
-        "message": "all checks passed" if all_ok else "some checks failed",
-        "data": {
-            "platform": sys.platform,
-            "plugin_root": os.environ.get("CLAUDE_PLUGIN_ROOT", ""),
-            "server_url": base_url,
-            "checks": checks,
-            "next_step": "环境正常，可正常调用 flash/digest/weekly/search" if all_ok else "按 hint 修复后再调用其它子命令",
-        },
-    }
-    print(json.dumps(out, ensure_ascii=False, indent=2))
-    return 0 if all_ok else 1
-
-
 def cmd_search(args: argparse.Namespace) -> int:
     """search_news: 关键词搜索 (走财联社搜索)."""
     params = {
@@ -478,10 +399,7 @@ def _build_parser() -> argparse.ArgumentParser:
         parents=[common],
     )
 
-    sub = parser.add_subparsers(dest="cmd", required=True, metavar="{doctor|flash|digest|weekly|search}")
-
-    p_doctor = sub.add_parser("doctor", help="环境自检：Python/依赖/API key/连通性", parents=[common])
-    p_doctor.set_defaults(func=cmd_doctor)
+    sub = parser.add_subparsers(dest="cmd", required=True, metavar="{flash|digest|weekly|search}")
 
     p_flash = sub.add_parser("flash", help="list_news_flash: 按时间范围列快讯", parents=[common])
     p_flash.add_argument("--start", required=False,
@@ -526,9 +444,8 @@ def main() -> int:
     parser = _build_parser()
     args = parser.parse_args()
 
-    # doctor 自己处理 API key 缺失（用于报告状态），不在此处强制退出
-    if getattr(args, "func", None) is not cmd_doctor:
-        _fetch_api_key(args)
+    # 提前验证 API key 和 URL, 统一错误退出 (避免每个 cmd 重复处理)
+    _fetch_api_key(args)
 
     return args.func(args)
 

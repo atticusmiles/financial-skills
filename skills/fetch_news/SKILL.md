@@ -45,31 +45,8 @@ The user must provide:
      1. `--api-key th_xxx` flag (per-invocation)
      2. `TRADEHUB_API_KEY` env var
      3. **`TRADEHUB_API_KEY` file** in the skill directory (i.e. `skills/fetch_news/TRADEHUB_API_KEY`) — recommended for persistent local setup; the file should contain just the key (optionally trailing newline), and is gitignored
-    - If none of the three is present, the CLI exits with code 2 and a friendly error
-    - Never commit the API Key file or echo it in plaintext logs
-
-## 首次使用（环境自检）
-
-**第一次调用前先跑 `doctor`，一次确认 Python/API key/网络连通性**：
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py doctor
-```
-
-返回 `code=0` 即可正常使用其它子命令；否则按 `data.checks[*].hint` 修复。
-
-**配置 API key（三选一，推荐文件方式）**：
-
-```bash
-# Linux/macOS
-echo "th_xxxxxxxxxxxxxxxxxxxxxxxxxxxx" > ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/TRADEHUB_API_KEY
-# Windows cmd
-echo th_xxxxxxxxxxxxxxxxxxxxxxxxxxxx > "%CLAUDE_PLUGIN_ROOT%\skills\fetch_news\TRADEHUB_API_KEY"
-# Windows PowerShell
-echo th_xxxxxxxxxxxxxxxxxxxxxxxxxxxx > "$env:CLAUDE_PLUGIN_ROOT\skills\fetch_news\TRADEHUB_API_KEY"
-```
-
-> **Windows 提示：** 若 `python3` 命令不存在，改用 `python`。
+   - If none of the three is present, the CLI exits with code 2 and a friendly error
+   - Never commit the API Key file or echo it in plaintext logs
 
 ## How to Use
 

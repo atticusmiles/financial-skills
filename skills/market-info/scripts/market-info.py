@@ -77,7 +77,6 @@ def print_usage():
     print(json.dumps({
         "skill": "market-info",
         "actions": [
-            "doctor",
             "quote", "kline_baidu", "hot_stocks", "northbound",
             "concept_blocks", "fund_flow_minute", "dragon_tiger",
             "daily_dragon_tiger", "lockup_expiry", "industry_compare",
@@ -690,90 +689,7 @@ def action_fund_flow_120d(p: dict):
 
 # ── 主入口 ────────────────────────────────────────────────
 
-def action_doctor(_payload):
-    """环境自检：Python 版本、依赖、各数据源连通性、样本调用。"""
-    checks = []
-
-    # 1. Python 版本
-    pv = sys.version_info
-    py_ok = pv >= (3, 9)
-    checks.append({
-        "name": "python_version",
-        "ok": py_ok,
-        "detail": f"{pv.major}.{pv.minor}.{pv.micro}",
-        "hint": "需要 Python 3.9+" if not py_ok else "",
-    })
-
-    # 2. requests 依赖
-    try:
-        import requests as _r
-        checks.append({
-            "name": "requests",
-            "ok": True,
-            "detail": getattr(_r, "__version__", "unknown"),
-            "hint": "",
-        })
-    except ImportError:
-        checks.append({
-            "name": "requests",
-            "ok": False,
-            "detail": "missing",
-            "hint": "运行: pip install requests",
-        })
-
-    # 3. 各数据源连通性（HEAD/GET 任一即可）
-    endpoints = [
-        ("tencent_quote", "https://qt.gtimg.cn/q=sh000001", "腾讯行情"),
-        ("em_datacenter", "https://push2.eastmoney.com/api/qt/stock/get?secid=1.000001", "东财行情"),
-    ]
-    for key, url, label in endpoints:
-        try:
-            r = _r.get(url, timeout=8, headers={"User-Agent": UA}) if "requests" in sys.modules else None
-            ok = bool(r and r.status_code < 500)
-            checks.append({
-                "name": key,
-                "ok": ok,
-                "detail": f"{label} HTTP {r.status_code if r else 'skipped'}",
-                "hint": "" if ok else "网络/DNS 问题或源站暂时不可达，稍后重试",
-            })
-        except Exception as e:
-            checks.append({
-                "name": key,
-                "ok": False,
-                "detail": f"{label} {type(e).__name__}: {e}",
-                "hint": "检查网络/防火墙/DNS",
-            })
-
-    # 4. 样本调用：腾讯 quote
-    try:
-        sample = action_quote({"codes": ["600519"]})
-        sample_ok = sample.get("code") == 0 and "600519" in sample.get("data", {})
-        checks.append({
-            "name": "sample_quote",
-            "ok": sample_ok,
-            "detail": "600519 → " + str(sample.get("data", {}).get("600519", {}).get("name", "?")),
-            "hint": "" if sample_ok else "样本调用失败，请检查网络",
-        })
-    except Exception as e:
-        checks.append({
-            "name": "sample_quote", "ok": False,
-            "detail": f"{type(e).__name__}: {e}", "hint": "样本调用异常",
-        })
-
-    all_ok = all(c["ok"] for c in checks)
-    return {
-        "code": 0 if all_ok else 1,
-        "message": "all checks passed" if all_ok else "some checks failed",
-        "data": {
-            "platform": sys.platform,
-            "plugin_root": os.environ.get("CLAUDE_PLUGIN_ROOT", ""),
-            "checks": checks,
-            "next_step": "环境正常，可正常调用其它 action" if all_ok else "按 hint 修复后再调用其它 action",
-        },
-    }
-
 ACTIONS = {
-    "doctor":              action_doctor,
     "quote":               action_quote,
     "kline_baidu":         action_kline_baidu,
     "hot_stocks":          action_hot_stocks,

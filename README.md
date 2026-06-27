@@ -22,18 +22,6 @@ pip install requests pandas
 
 安装后三个 skill 即可被 Claude Code 自动加载：`market-info`、`stock-research`、`fetch_news`。
 
-**首次使用前先做环境自检（推荐）**：
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/market-info/scripts/market-info.py '{"action":"doctor"}'
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/stock-research/scripts/stock-research.py '{"action":"doctor"}'
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py doctor
-```
-
-每个 skill 都内置 `doctor`，一次确认 Python 版本/依赖/网络/API key 是否就绪，返回 `code=0` 即可正常调用。
-
-> **Windows 提示：** 若 `python3` 不在 PATH，改用 `python`。
-
 ## Skills
 
 ### market-info — 实时市场行情

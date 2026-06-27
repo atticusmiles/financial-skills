@@ -82,9 +82,9 @@ def print_usage():
     print(json.dumps({
         "skill": "stock-research",
         "actions": [
-            "doctor",
-            "reports", "eps_forecast", "stock_info", "financial_report",
-            "announcements", "valuation", "full_valuation",
+            "reports", "eps_forecast", "stock_info",
+            "financial_report", "announcements",
+            "valuation", "full_valuation",
         ],
         "example": json.dumps({"action": "reports", "code": "600519"}),
     }, ensure_ascii=False, indent=2))
@@ -482,83 +482,7 @@ def action_full_valuation(p: dict):
 
 from datetime import datetime  # noqa: E402 (used in announcements action)
 
-def action_doctor(_payload):
-    """环境自检：Python 版本、依赖、各数据源连通性、样本调用。"""
-    checks = []
-
-    pv = sys.version_info
-    checks.append({
-        "name": "python_version",
-        "ok": pv >= (3, 9),
-        "detail": f"{pv.major}.{pv.minor}.{pv.micro}",
-        "hint": "" if pv >= (3, 9) else "需要 Python 3.9+",
-    })
-
-    # requests
-    try:
-        import requests as _r
-        checks.append({"name": "requests", "ok": True,
-                       "detail": getattr(_r, "__version__", "unknown"), "hint": ""})
-    except ImportError:
-        checks.append({"name": "requests", "ok": False, "detail": "missing",
-                       "hint": "运行: pip install requests"})
-
-    # pandas（仅 eps_forecast / full_valuation 需要）
-    try:
-        import pandas as _pd
-        checks.append({"name": "pandas", "ok": True,
-                       "detail": getattr(_pd, "__version__", "unknown"),
-                       "hint": ""})
-    except ImportError:
-        checks.append({"name": "pandas", "ok": False, "detail": "missing",
-                       "hint": "运行: pip install pandas (eps_forecast/full_valuation 需要)"})
-
-    # 连通性
-    endpoints = [
-        ("em_datacenter", "https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_F10_BASIC_ORGINFO&columns=SECUCODE,SECURITY_NAME_ABBR&filter=(SECUCODE=%22600519.SH%22)&pageSize=1", "东财 datacenter"),
-        ("cninfo", "http://www.cninfo.com.cn/new/data/szse_stock.json", "巨潮公告"),
-    ]
-    for key, url, label in endpoints:
-        try:
-            if "requests" in sys.modules:
-                r = requests.get(url, timeout=8, headers={"User-Agent": UA})
-                ok = r.status_code < 500
-                checks.append({"name": key, "ok": ok,
-                               "detail": f"{label} HTTP {r.status_code}",
-                               "hint": "" if ok else "源站暂时不可达，稍后重试"})
-            else:
-                checks.append({"name": key, "ok": False, "detail": "skipped (no requests)",
-                               "hint": "先安装 requests"})
-        except Exception as e:
-            checks.append({"name": key, "ok": False,
-                           "detail": f"{label} {type(e).__name__}: {e}",
-                           "hint": "检查网络/防火墙/DNS"})
-
-    # 样本：stock_info
-    try:
-        sample = action_stock_info({"code": "600519"})
-        sample_ok = sample.get("code") == 0
-        checks.append({"name": "sample_stock_info", "ok": sample_ok,
-                       "detail": "600519 → " + str(sample.get("data", {}).get("name", "?")),
-                       "hint": "" if sample_ok else "样本调用失败"})
-    except Exception as e:
-        checks.append({"name": "sample_stock_info", "ok": False,
-                       "detail": f"{type(e).__name__}: {e}", "hint": "样本调用异常"})
-
-    all_ok = all(c["ok"] for c in checks)
-    return {
-        "code": 0 if all_ok else 1,
-        "message": "all checks passed" if all_ok else "some checks failed",
-        "data": {
-            "platform": sys.platform,
-            "plugin_root": os.environ.get("CLAUDE_PLUGIN_ROOT", ""),
-            "checks": checks,
-            "next_step": "环境正常，可正常调用其它 action" if all_ok else "按 hint 修复后再调用其它 action",
-        },
-    }
-
 ACTIONS = {
-    "doctor":            action_doctor,
     "reports":           action_reports,
     "eps_forecast":      action_eps_forecast,
     "stock_info":        action_stock_info,

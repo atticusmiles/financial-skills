@@ -43,18 +43,6 @@ pip install requests
 {"error": "pip install requests first", "exit_code": 1}
 ```
 
-## 首次使用（环境自检）
-
-**第一次调用前先跑 `doctor`，一次确认 Python/依赖/网络/样本调用都正常**：
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/market-info/scripts/market-info.py '{"action":"doctor"}'
-```
-
-返回 `code=0` 即可正常使用其它 action；否则按 `data.checks[*].hint` 修复。
-
-> **Windows 提示：** 若 `python3` 命令不存在，改用 `python`（Windows 官方安装器只装 `python`）。输出已自动按 stdout 是否管道化做编码切换，无需手动设 `PYTHONIOENCODING`。
-
 ## 快速开始
 
 `${CLAUDE_PLUGIN_ROOT}` 是 Claude Code 在运行时注入的变量，指向本 plugin 的安装根目录。
