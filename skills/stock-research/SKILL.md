@@ -217,6 +217,12 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/stock-research/scripts/stock-research.py '{
 
 ---
 
+## Windows 编码
+
+pipe 输出到另一个 python 进程时，消费端默认按 cp936 解码 stdin，会把 UTF-8 中文读成乱码。**Windows 上务必先 `set PYTHONUTF8=1`（cmd）或 `$env:PYTHONUTF8=1`（PowerShell）再调用。**
+
+---
+
 ## 环境变量
 
 | 变量 | 默认值 | 说明 |
