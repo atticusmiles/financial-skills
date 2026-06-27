@@ -39,6 +39,18 @@ pip install requests pandas
 
 > 其余 action（reports, stock_info, financial_report, announcements, valuation）**无需 pandas**，只装 `requests` 即可使用。
 
+## 首次使用（环境自检）
+
+**第一次调用前先跑 `doctor`，一次确认 Python/依赖/网络/样本调用都正常**：
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/stock-research/scripts/stock-research.py '{"action":"doctor"}'
+```
+
+返回 `code=0` 即可正常使用其它 action；否则按 `data.checks[*].hint` 修复。
+
+> **Windows 提示：** 若 `python3` 命令不存在，改用 `python`。
+
 ## 快速开始
 
 ```bash
