@@ -2,10 +2,10 @@
   "name": "financial-skills",
   "description": "A股金融数据 skill 集合 — 实时行情、研报估值、新闻快讯。",
   "author": {
-    "name": "simonlin1212"
+    "name": "atticusmiles"
   },
-  "homepage": "https://github.com/simonlin1212/a-stock-data",
-  "repository": "https://github.com/simonlin1212/a-stock-data",
+  "homepage": "https://github.com/atticusmiles/financial-skills",
+  "repository": "https://github.com/atticusmiles/financial-skills",
   "license": "Apache-2.0",
   "keywords": ["finance", "a-stock", "market", "research", "news"]
 }
