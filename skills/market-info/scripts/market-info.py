@@ -18,6 +18,14 @@ import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
 
+# 强制 stdout/stderr 使用 UTF-8，避免 Windows 子进程默认 cp936 导致中文乱码
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
 try:
     import requests
 except ImportError:

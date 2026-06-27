@@ -38,6 +38,15 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+# 强制 stdout/stderr 使用 UTF-8，避免 Windows 子进程默认 cp936 导致中文乱码
+# (subprocess 捕获时 Python 会用系统 ANSI 代码页而非 UTF-8)
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
 
 DEFAULT_URL = "https://tradehub-api.niotech.cc"
 DEFAULT_TIMEOUT = 30
