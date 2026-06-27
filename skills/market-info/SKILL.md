@@ -45,10 +45,10 @@ pip install requests
 
 ## 快速开始
 
-`{baseDir}` 是 agent 框架在运行时自动替换的变量，指向当前 skill 目录的绝对路径。
+`${CLAUDE_PLUGIN_ROOT}` 是 Claude Code 在运行时注入的变量，指向本 plugin 的安装根目录。
 
 ```bash
-python3 {baseDir}/scripts/market-info.py '{"action":"<action>",...}'
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/market-info/scripts/market-info.py '{"action":"<action>",...}'
 ```
 
 ## 输入约定

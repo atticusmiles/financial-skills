@@ -58,27 +58,27 @@ Best for agents with shell access. Pure-stdlib Python 3 (no dependencies).
 
 ```bash
 # List today's news flash
-python3 skills/fetch_news/scripts/fetch_news.py flash \
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py flash \
   --start "2026-06-22 00:00:00" \
   --end   "2026-06-22 23:59:59" \
   --api-key th_xxx
 
 # List recent digests (default: last 30 days)
-python3 skills/fetch_news/scripts/fetch_news.py digest --api-key th_xxx
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py digest --api-key th_xxx
 
 # Get a specific digest by date
-python3 skills/fetch_news/scripts/fetch_news.py digest \
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py digest \
   --start 2026-06-21 --end 2026-06-21 --api-key th_xxx
 
 # Search news (keyword)
-python3 skills/fetch_news/scripts/fetch_news.py search \
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py search \
   --keyword "美联储" --max-count 10 --api-key th_xxx
 
 # List weekly digests (default: last 90 days)
-python3 skills/fetch_news/scripts/fetch_news.py weekly --api-key th_xxx
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py weekly --api-key th_xxx
 
 # Get a specific week by week_start date
-python3 skills/fetch_news/scripts/fetch_news.py weekly \
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py weekly \
   --start 2026-06-15 --end 2026-06-15 --api-key th_xxx
 ```
 
@@ -226,7 +226,7 @@ Failure modes:
 ### User: "今天市场有什么新闻？"
 
 ```bash
-python3 skills/fetch_news/scripts/fetch_news.py flash \
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py flash \
   --start "2026-06-22 00:00:00" --end "2026-06-22 23:59:59" \
   --page-size 50 --api-key th_xxx
 ```
@@ -236,7 +236,7 @@ Summarize the top items by subject cluster.
 ### User: "昨天的重要新闻汇总"
 
 ```bash
-python3 skills/fetch_news/scripts/fetch_news.py digest \
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py digest \
   --start 2026-06-21 --end 2026-06-21 --api-key th_xxx
 ```
 
@@ -245,7 +245,7 @@ Render the returned `summary` markdown directly.
 ### User: "搜一下美联储相关新闻"
 
 ```bash
-python3 skills/fetch_news/scripts/fetch_news.py search \
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py search \
   --keyword "美联储" --max-count 15 --api-key th_xxx
 ```
 
@@ -255,7 +255,7 @@ Group results by time and mention source attribution.
 
 ```bash
 # 周报一次消费 13 周数据 (90 天 ≈ 13 周), 效率远高于逐日看 90 份日报
-python3 skills/fetch_news/scripts/fetch_news.py weekly \
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py weekly \
   --page-size 20 --api-key th_xxx
 ```
 

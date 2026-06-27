@@ -42,7 +42,7 @@ pip install requests pandas
 ## 快速开始
 
 ```bash
-python3 {baseDir}/scripts/stock-research.py '{"action":"<action>",...}'
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/stock-research/scripts/stock-research.py '{"action":"<action>",...}'
 ```
 
 ## 输入约定

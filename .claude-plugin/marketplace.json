@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/schema/plugin-marketplace.json",
+  "name": "financial-skills",
+  "owner": {
+    "name": "simonlin1212"
+  },
+  "description": "A股金融数据 skill 集合 — 实时行情、研报估值、新闻快讯。",
+  "plugins": [
+    {
+      "name": "financial-skills",
+      "source": "./",
+      "description": "A股金融数据 skill 集合：market-info（行情/信号/资金面）、stock-research（研报/基本面/公告/估值）、fetch_news（财联社快讯+每日要闻简报）。",
+      "version": "2.0.0",
+      "author": {
+        "name": "simonlin1212"
+      },
+      "homepage": "https://github.com/simonlin1212/a-stock-data",
+      "repository": "https://github.com/simonlin1212/a-stock-data",
+      "license": "Apache-2.0",
+      "keywords": ["finance", "a-stock", "market", "research", "news", "chinese"],
+      "category": "finance",
+      "skills": [
+        "./skills/market-info",
+        "./skills/stock-research",
+        "./skills/fetch_news"
+      ]
+    }
+  ]
+}

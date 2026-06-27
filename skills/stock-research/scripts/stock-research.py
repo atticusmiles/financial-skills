@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """stock-research — A股股票信息与研报工具
 
-用法: python3 {baseDir}/scripts/stock-research.py '<JSON>'
+用法: python3 ${CLAUDE_PLUGIN_ROOT}/skills/stock-research/scripts/stock-research.py '<JSON>'
 
 所有行动公用一个 JSON 入参，按 stdout 输出 JSON 结果。
 成功: {"code":0, "message":"ok", "data":...}

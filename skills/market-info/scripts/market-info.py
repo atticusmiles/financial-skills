@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """market-info — A股实时市场行情数据工具
 
-用法: python3 {baseDir}/scripts/market-info.py '<JSON>'
+用法: python3 ${CLAUDE_PLUGIN_ROOT}/skills/market-info/scripts/market-info.py '<JSON>'
 
 所有行动公用一个 JSON 入参，按 stdout 输出 JSON 结果。
 成功: {"code":0, "message":"ok", "data":...}
