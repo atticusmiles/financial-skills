@@ -162,7 +162,11 @@ def _strip_html(s: str) -> str:
 
 
 def _print_json(data) -> None:
-    print(json.dumps(data, ensure_ascii=False, indent=2))
+    """使用 UTF-8 编码输出 JSON，避免 Windows 编码问题。"""
+    json_str = json.dumps(data, ensure_ascii=False, indent=2)
+    # 直接写入 stdout 的底层 buffer，确保 UTF-8 编码
+    sys.stdout.buffer.write(json_str.encode("utf-8"))
+    sys.stdout.buffer.write(b"\n")  # 添加换行符
 
 
 # ============================== commands ==============================
