@@ -57,39 +57,55 @@ Use this skill when the user:
 
 ## How to Use
 
-Two equivalent paths — pick whichever fits the runtime.
+**⚠️ 所有调用必须使用以下方式之一避免中文乱码：**
 
-### Path A: Bundled Python CLI (`fetch_news.py`)
+### 方法1: PowerShell 调用（Windows 推荐，最可靠）
 
-Best for agents with shell access. Pure-stdlib Python 3 (no dependencies).
+```powershell
+# 列出今日快讯
+powershell.exe -NoProfile -Command "& python3 '${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py' flash --start '2026-06-22 00:00:00' --end '2026-06-22 23:59:59' --json"
 
-```bash
-# List today's news flash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py flash \
-  --start "2026-06-22 00:00:00" \
-  --end   "2026-06-22 23:59:59"
+# 列出最近简报
+powershell.exe -NoProfile -Command "& python3 '${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py' digest --json"
 
-# List recent digests (default: last 30 days)
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py digest
+# 指定日期简报
+powershell.exe -NoProfile -Command "& python3 '${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py' digest --start 2026-06-21 --end 2026-06-21 --json"
 
-# Get a specific digest by date
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py digest \
-  --start 2026-06-21 --end 2026-06-21
+# 关键词搜索
+powershell.exe -NoProfile -Command "& python3 '${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py' search --keyword '美联储' --json"
 
-# Search news (keyword)
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py search \
-  --keyword "美联储" --max-count 10
-
-# List weekly digests (default: last 90 days)
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py weekly
-
-# Get a specific week by week_start date
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py weekly \
-  --start 2026-06-15 --end 2026-06-15
+# 周报列表
+powershell.exe -NoProfile -Command "& python3 '${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py' weekly --json"
 ```
 
-Useful flags:
-- `--json` — emit raw JSON (default: human-readable; **推荐使用此模式避免编码问题**)
+### 方法2: JSON 输出到临时文件（通用）
+
+```bash
+# 输出到临时文件，然后用 Read 工具读取
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py digest --json > /tmp/news.json
+# 之后用 Read 工具读取 /tmp/news.json
+
+# 其他命令类似，只需加 --json 并重定向
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py flash --start "2026-06-22 00:00:00" --json > /tmp/flash.json
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py search --keyword "美联储" --json > /tmp/search.json
+```
+
+**大模型调用注意事项：**
+- 在 Windows 上**必须**使用上述两种方式之一
+- 绝不要直接调用 python3 命令而不加 PowerShell 包装或 --json 输出
+- 如果不确定，优先使用 PowerShell 方式
+
+### 命令说明
+
+| 命令 | 用途 | 常用参数 |
+|------|------|----------|
+| `flash` | 实时快讯列表 | `--start` (必需), `--end`, `--keyword`, `--page-size` |
+| `digest` | 每日要闻简报 | `--start`, `--end`, `--full` (显示完整内容) |
+| `weekly` | 每周投研简报 | `--start`, `--end`, `--full` |
+| `search` | 关键词搜索 | `--keyword` (必需), `--max-count` |
+
+其他有用参数：
+- `--json` — 输出 JSON 格式（**必须使用以避免编码问题**）
 - `--url https://your-host` — override server URL (default: `https://tradehub.niotech.cc`; also read from `TRADEHUB_URL` env)
 - `--page-size N` — pagination (flash max 5000, digest max 180, weekly max 60, search max 100)
 - `--page N` — page number
@@ -279,40 +295,44 @@ Failure modes:
 
 ## Examples
 
+**所有示例均使用 PowerShell + --json 方式确保编码正确。**
+
 ### User: "今天市场有什么新闻？"
 
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py flash \
-  --start "2026-06-22 00:00:00" --end "2026-06-22 23:59:59" \
-  --page-size 50
+```powershell
+powershell.exe -NoProfile -Command "& python3 '${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py' flash --start '2026-06-22 00:00:00' --end '2026-06-22 23:59:59' --page-size 50 --json"
 ```
 
-Summarize the top items by subject cluster.
+从返回的 JSON 中提取 `items` 数组，按主题聚类并总结。
 
 ### User: "昨天的重要新闻汇总"
 
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py digest \
-  --start 2026-06-21 --end 2026-06-21
+```powershell
+powershell.exe -NoProfile -Command "& python3 '${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py' digest --start 2026-06-21 --end 2026-06-21 --json"
 ```
 
-Render the returned `summary` markdown directly.
+从返回 JSON 的 `items[0].summary` 字段获取完整 markdown 并渲染给用户。
 
 ### User: "搜一下美联储相关新闻"
 
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py search \
-  --keyword "美联储" --max-count 15
+```powershell
+powershell.exe -NoProfile -Command "& python3 '${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py' search --keyword '美联储' --max-count 15 --json"
 ```
 
-Group results by time and mention source attribution.
+从 `list` 数组中提取结果，按时间分组展示并标注来源。
 
 ### User: "过去 90 天有什么投资机会？"
 
-```bash
+```powershell
 # 周报一次消费 13 周数据 (90 天 ≈ 13 周), 效率远高于逐日看 90 份日报
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py weekly \
-  --page-size 20
+powershell.exe -NoProfile -Command "& python3 '${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py' weekly --page-size 20 --json"
 ```
 
-逐周阅读 `summary` markdown, 提取跨周主题演变、当前主线、下周关注。日级细节按需用 `digest --start <date> --end <date>` 回查。
+逐周阅读 `items[].summary` markdown, 提取跨周主题演变、当前主线、下周关注。日级细节按需用 `digest --start <date> --end <date>` 回查。
+
+**重要：如果上述 PowerShell 调用失败或不可用，使用临时文件方式：**
+
+```bash
+# 任何命令后加 --json > /tmp/output.json，然后 Read 工具读取
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fetch_news/scripts/fetch_news.py digest --json > /tmp/news.json
+```
