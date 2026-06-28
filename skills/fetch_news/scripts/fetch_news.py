@@ -38,13 +38,22 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-# 仅当 stdout/stderr 被管道/重定向捕获时（非 tty）强制 UTF-8，
-# 这样 subprocess 捕获拿到稳定字节；直连控制台时保持系统编码（如 Windows
-# cmd 的 cp936），避免按 UTF-8 输出却被控制台按 cp936 显示而乱码。
+# 跨平台 UTF-8 输出配置：
+# - Windows: 始终强制 UTF-8（Git Bash/PowerShell/Windows Terminal 都支持）
+# - Linux/Mac: 仅在管道/重定向时强制 UTF-8，保持终端原有编码
+# - 支持通过 PYTHONIOENCODING 环境变量覆盖
+import platform
+_is_windows = platform.system() == "Windows"
+
+# 环境变量覆盖（高级用户可自定义）
+_override_encoding = os.environ.get("PYTHONIOENCODING", "").strip() or None
+
 for _stream in (sys.stdout, sys.stderr):
-    if not _stream.isatty() and hasattr(_stream, "reconfigure"):
+    should_force_utf8 = _is_windows or not _stream.isatty()
+    if should_force_utf8 and hasattr(_stream, "reconfigure"):
         try:
-            _stream.reconfigure(encoding="utf-8", errors="replace")
+            encoding = _override_encoding or "utf-8"
+            _stream.reconfigure(encoding=encoding, errors="replace")
         except (AttributeError, ValueError):
             pass
 
@@ -64,8 +73,9 @@ def _get_base_url() -> str:
 
 
 def _read_api_key_file() -> str:
-    """从 skill 目录的 TRADEHUB_API_KEY 文件读取 key. 失败返回空串.
+    """从 skill 根目录的 API Key 文件读取 key. 失败返回空串.
 
+    文件位置: <skill根目录>/TRADEHUB_API_KEY
     文件格式: 单行, 可选尾换行. 例如:
         th_MTWAr_xxxxxxxxxxxxxxxxxxxxxxxxxx
     """
@@ -270,10 +280,6 @@ def cmd_digest(args: argparse.Namespace) -> int:
             print(f"  _生成失败: {err}_")
         print("\n---\n")
     return 0
-
-
-def cmd_search(args: argparse.Namespace) -> int:
-    """search_news: 关键词搜索 (走财联社搜索)."""
 
 
 def cmd_weekly(args: argparse.Namespace) -> int:
