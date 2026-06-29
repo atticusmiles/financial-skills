@@ -10,26 +10,27 @@
 依赖: 仅 Python 3 标准库 (urllib + json + argparse).
 鉴权: Authorization: Bearer th_xxx (TradeHub API Key).
 
+响应外层字段统一为 `list` (v1.10.4+); ctime / created_at 已是 'YYYY-MM-DD HH:MM:SS'
+字符串 (Asia/Shanghai, 无时区后缀), 无需客户端再转.
+
 使用示例:
 
   # 列出今日快讯
   python3 fetch_news.py flash \\
-    --start "2026-06-22 00:00:00" --end "2026-06-22 23:59:59" \\
-    --api-key th_xxx
+    --start "2026-06-22 00:00:00" --end "2026-06-22 23:59:59"
 
   # 列出最近 30 天简报
-  python3 fetch_news.py digest --api-key th_xxx
+  python3 fetch_news.py digest
 
   # 列出最近 90 天周报
-  python3 fetch_news.py weekly --api-key th_xxx
+  python3 fetch_news.py weekly
 
   # 关键词搜索
-  python3 fetch_news.py search --keyword "美联储" --api-key th_xxx
+  python3 fetch_news.py search --keyword "美联储"
 """
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import json
 import os
 import re
@@ -158,14 +159,6 @@ def _request(base_url: str, api_key: str, path: str, params: dict | None = None)
         sys.exit(1)
 
 
-def _ts_to_str(ts: int | float | None) -> str:
-    """unix 秒 → 'YYYY-MM-DD HH:mm:ss' (Asia/Shanghai = UTC+8)."""
-    if not ts:
-        return ""
-    tz = dt.timezone(dt.timedelta(hours=8))
-    return dt.datetime.fromtimestamp(int(ts), tz=tz).strftime("%Y-%m-%d %H:%M:%S")
-
-
 def _strip_html(s: str) -> str:
     """剥离 CLS 搜索结果里的 <em>...</em> 等标签, 给人类可读模式用."""
     return _HTML_TAG_RE.sub("", s or "")
@@ -193,6 +186,7 @@ def cmd_flash(args: argparse.Namespace) -> int:
         "keyword": args.keyword or "",
         "page": args.page,
         "page_size": args.page_size,
+        "mode": "brief",
     }
     # 不传空 end_time (服务器会自动用 now)
     if not params["end_time"]:
@@ -212,13 +206,13 @@ def cmd_flash(args: argparse.Namespace) -> int:
         return 0
 
     # 人类可读摘要
-    items = data.get("items", [])
+    items = data.get("list", [])
     print(f"# 财联社快讯 (共 {data.get('total', 0)} 条, 当前页 {len(items)} 条)")
     if args.keyword:
         print(f"# 过滤关键词: {args.keyword}")
     print()
     for it in items:
-        ctime_str = _ts_to_str(it.get("ctime"))
+        ctime_str = it.get("ctime") or ""
         title = (it.get("title") or "").strip()
         content = (it.get("content") or "").strip()
         author = it.get("author") or "财联社"
@@ -234,6 +228,7 @@ def cmd_digest(args: argparse.Namespace) -> int:
     params = {
         "page": args.page,
         "page_size": args.page_size,
+        "mode": "brief",
     }
     if args.start:
         params["start_date"] = args.start
@@ -251,7 +246,7 @@ def cmd_digest(args: argparse.Namespace) -> int:
         _print_json(data)
         return 0
 
-    items = data.get("items", [])
+    items = data.get("list", [])
     print(f"# 每日要闻简报 (共 {data.get('total', 0)} 篇, 当前页 {len(items)} 篇)")
     print()
     if not items:
@@ -260,24 +255,19 @@ def cmd_digest(args: argparse.Namespace) -> int:
 
     for it in items:
         date = it.get("digest_date", "?")
-        status = it.get("status", "?")
         news_count = it.get("news_count", 0)
-        print(f"## {date}  (status: {status}, news_count: {news_count})")
-        if status == "success":
-            summary = (it.get("summary") or "").strip()
-            if args.full:
-                print()
-                print(summary)
-            else:
-                # 只显示前 500 字符作为预览
-                preview = summary[:500]
-                if len(summary) > 500:
-                    preview += f"\n\n... (余 {len(summary) - 500} 字, 加 --full 展开)"
-                print()
-                print(preview)
+        print(f"## {date}  ({news_count} 条快讯)")
+        summary = (it.get("summary") or "").strip()
+        if args.full:
+            print()
+            print(summary)
         else:
-            err = it.get("error_message") or ""
-            print(f"  _生成失败: {err}_")
+            # 只显示前 500 字符作为预览
+            preview = summary[:500]
+            if len(summary) > 500:
+                preview += f"\n\n... (余 {len(summary) - 500} 字, 加 --full 展开)"
+            print()
+            print(preview)
         print("\n---\n")
     return 0
 
@@ -287,6 +277,7 @@ def cmd_weekly(args: argparse.Namespace) -> int:
     params = {
         "page": args.page,
         "page_size": args.page_size,
+        "mode": "brief",
     }
     if args.start:
         params["start_date"] = args.start
@@ -304,7 +295,7 @@ def cmd_weekly(args: argparse.Namespace) -> int:
         _print_json(data)
         return 0
 
-    items = data.get("items", [])
+    items = data.get("list", [])
     print(f"# 每周投研简报 (共 {data.get('total', 0)} 篇, 当前页 {len(items)} 篇)")
     print()
     if not items:
@@ -314,24 +305,19 @@ def cmd_weekly(args: argparse.Namespace) -> int:
     for it in items:
         ws = it.get("week_start_date", "?")
         we = it.get("week_end_date", "?")
-        status = it.get("status", "?")
         day_count = it.get("day_count", 0)
         news_count = it.get("news_count", 0)
-        print(f"## {ws} ~ {we}  (status: {status}, {day_count}/7 天, {news_count} 条快讯)")
-        if status == "success":
-            summary = (it.get("summary") or "").strip()
-            if args.full:
-                print()
-                print(summary)
-            else:
-                preview = summary[:500]
-                if len(summary) > 500:
-                    preview += f"\n\n... (余 {len(summary) - 500} 字, 加 --full 展开)"
-                print()
-                print(preview)
+        print(f"## {ws} ~ {we}  ({day_count}/7 天, {news_count} 条快讯)")
+        summary = (it.get("summary") or "").strip()
+        if args.full:
+            print()
+            print(summary)
         else:
-            err = it.get("error_message") or ""
-            print(f"  _生成失败: {err}_")
+            preview = summary[:500]
+            if len(summary) > 500:
+                preview += f"\n\n... (余 {len(summary) - 500} 字, 加 --full 展开)"
+            print()
+            print(preview)
         print("\n---\n")
     return 0
 
@@ -342,6 +328,7 @@ def cmd_search(args: argparse.Namespace) -> int:
         "keyword": args.keyword or "",
         "last_time": args.last_time,
         "max_count": args.max_count,
+        "mode": "brief",
     }
     data = _request(
         _resolve_url(args),
@@ -366,7 +353,7 @@ def cmd_search(args: argparse.Namespace) -> int:
         print(f"# 关键词: {args.keyword}")
     print()
     for it in items:
-        ctime_str = _ts_to_str(it.get("ctime"))
+        ctime_str = it.get("ctime") or ""
         title = _strip_html((it.get("title") or "").strip())
         content = _strip_html((it.get("content") or "").strip())
         print(f"## [{ctime_str}] {title or '(无标题)'}")

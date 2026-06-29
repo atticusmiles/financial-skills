@@ -63,9 +63,11 @@ python3 ${SKILL_ROOT}/scripts/fetch_news.py weekly --json
 
 ## 返回字段
 
-- **flash**：`items[].{id, title, content, ctime(unix 秒, Asia/Shanghai), author, subjects[]}`、`total`
-- **digest**：`items[].{digest_date, summary(完整 markdown), news_count, status}` —— `summary` 直接按 markdown 渲染
-- **weekly**：`items[].{week_start_date(周一), week_end_date, day_count(5~7), summary(8 段二级标题), news_count, status}` —— 部分周（`day_count<7`）会在 summary 标注缺失日期，不臆测
+所有列表接口外层字段为 `list`（v1.10.4+），`ctime` 已是 `"YYYY-MM-DD HH:MM:SS"` 字符串（Asia/Shanghai，无时区后缀），无需再转。
+
+- **flash**：`list[].{title, content, ctime, author}`、`total`
+- **digest**：`list[].{digest_date, summary(完整 markdown), news_count}` —— `summary` 直接按 markdown 渲染
+- **weekly**：`list[].{week_start_date(周一), week_end_date, day_count(5~7), summary(8 段二级标题), news_count}` —— 部分周（`day_count<7`）会在 summary 标注缺失日期，不臆测
 - **search**：`list[].{title, content, ctime}`、`scanned`、`pages_fetched` —— `title/content` 可能含 `<em>` 高亮标签，自行剥离；服务端不保证严格截断 `max_count`
 
 ## 鉴权
