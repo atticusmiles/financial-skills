@@ -108,7 +108,7 @@ def _fetch_api_key(args: argparse.Namespace) -> str:
     if not key:
         sys.stderr.write(
             "ERROR: missing API key. Set TRADEHUB_API_KEY environment variable "
-            "or create skills/fetch_news/TRADEHUB_API_KEY file.\n"
+            "or create skills/fetch-news/TRADEHUB_API_KEY file.\n"
         )
         sys.exit(2)
     return key

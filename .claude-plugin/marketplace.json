@@ -9,7 +9,7 @@
     {
       "name": "financial-skills",
       "source": "./",
-      "description": "A股金融数据 skill 集合：market-info（行情/信号/资金面）、stock-research（研报/基本面/公告/估值）、fetch_news（财联社快讯+每日要闻简报）。",
+      "description": "A股金融数据 skill 集合：market-info（行情/信号/资金面）、stock-research（研报/基本面/公告/估值）、fetch-news（财联社快讯+每日要闻简报）。",
       "author": {
         "name": "atticusmiles"
       },
@@ -21,7 +21,7 @@
       "skills": [
         "./skills/market-info",
         "./skills/stock-research",
-        "./skills/fetch_news"
+        "./skills/fetch-news"
       ]
     }
   ]

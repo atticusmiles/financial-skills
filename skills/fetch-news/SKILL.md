@@ -1,5 +1,5 @@
 ---
-name: fetch_news
+name: fetch-news
 description: 查询 TradeHub 新闻数据库——财联社实时快讯、每日要闻简报、每周投研简报。当用户想看财经新闻、市场动态、每日/每周新闻摘要，或按关键词检索历史新闻时使用。触发词：财经新闻 / 市场动态 / 今日要闻 / 昨天新闻 / 财联社快讯 / 简报 / 周报 / 搜索新闻 / news / digest / newsflash。
 ---
 
@@ -79,7 +79,7 @@ python3 ${SKILL_ROOT}/scripts/fetch_news.py weekly --json
 1. 登录 TradeHub Web → 头像 → Settings → "API Key" 生成
 2. 二选一：
    - 环境变量：export TRADEHUB_API_KEY=th_xxx
-   - 文件（推荐持久化）：把 th_xxx 写入 skills/fetch_news/TRADEHUB_API_KEY
+   - 文件（推荐持久化）：把 th_xxx 写入 skills/fetch-news/TRADEHUB_API_KEY
 ```
 
 其它错误码：`401` key 无效 / `422` 缺参数 / `502` 财联社上游反爬（仅 search）。
